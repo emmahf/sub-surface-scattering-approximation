@@ -76,7 +76,7 @@ void main(void)
     int iLTPower = 2;
     
     vec4 fLightAttenuation = vec4(1.0,1.0,1.0,1.0); // TODO
-    vec4 fLTThickness = vec4(1.0,1.0,1.0,1.0) - texture(texUnit, outTexCoord);
+    vec4 fLTThickness = vec4(1.0,0.0,1.0,1.0) - texture(texUnit, outTexCoord);
     
     
     // The relation to the light
@@ -108,6 +108,7 @@ void main(void)
     // Test av V
     // out_Color = vec4(V, 1.0);
     
+   // out_Color = vec4(1.0,0.0,0.0,1.0);
 }
 
 
