@@ -7,11 +7,11 @@ Approximation of sub surface scattering in OpenGL with local thickness approxima
 To compile on mac run:
 
 ```
-gcc projekt.c common/*.c common/MicroGlut2.m -framework OpenGL -framework Cocoa -o projekt -Icommon/
+gcc projekt.c common/*.c common/MicroGlut2.m -framework OpenGL -framework Cocoa -o runproject -Icommon/
 ```
 
 to run:
 
 ```
-./projekt
+./runproject
 ```
