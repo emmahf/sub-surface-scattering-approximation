@@ -16,6 +16,7 @@ in vec3 pixPos;  // Needed for specular reflections
 
 uniform sampler2D texUnit;
 uniform vec3 camPosition;
+uniform vec3 lightPosition;
 
 uniform mat4 viewMatrix;
 
@@ -27,13 +28,15 @@ void main(void)
     //IN VIEW COORDINATES
     
     //DIFFUSE LIGHT
-   // vec3 translight = vec3(0.1,0.1,0.1); // Light source in view coordinates
-    vec3 translight = vec3(-10.0, 0.0, -10.0);
+    // Light source in world coordinates
+    vec3 translight = vec3(lightPosition.x, lightPosition.y, lightPosition.z);
+    translight = mat3(viewMatrix)*lightPosition;
+
+    //Set color of
     vec4 colorOfLight = vec4(0.7,0.9,1.0,1.0);
     vec3 light = vec3(1.0,0.0,0.0);
 	
     light = translight;
-    //light = vec3( viewMatrix*vec4(light,1.0));
     light = normalize(light);
     float diffuse, specular, shade;
 	
@@ -91,13 +94,13 @@ void main(void)
      vec4 fLT = fLightAttenuation * (fLTDot + fltAmbient)* fLTThickness;
     
     
-     out_Color += colorOfLight*colorDiffuseAlbedo*fLT;
-    
+     out_Color = colorOfLight*colorDiffuseAlbedo*fLT;
+     
     // Test av fLT
     // out_Color = fLT;
     
     // Test av local thickness
-     out_Color = fLTThickness;
+    // out_Color = fLTThickness;
     
     // Test av backlight
     // out_Color = vec4(fLTDot, fLTDot, fLTDot, 1.0);

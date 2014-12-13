@@ -2,6 +2,7 @@
 
 in  vec3 in_Position;
 in  vec3 in_Normal;
+
 out vec3 exNormal; // Phong
 out vec3 exSurface; // Phong (specular)
 
