@@ -29,8 +29,8 @@ float getMagnitude(vec3 v){
 void main(void)
 {
     //Model stuff
-    vec4 colorOfLight = vec4(0.7,0.9,1.0,1.0);
-    vec4 colorDiffuseAlbedo = vec4(1.0,0.5,0.7,1.0);
+    vec4 colorOfLight = vec4(1.0,1.0,1.0,1.0);
+    vec4 colorDiffuseAlbedo = vec4(1.0,0.2, 1.0,1.0);
 
     // Light source in world coordinates --> view coordinates
     vec3 light = mat3(viewMatrix)*lightPosition;
@@ -53,11 +53,11 @@ void main(void)
     vec3 N = out_Normal;
     
     
-    float fLTDistortion = 0.05, fLTScale = 5.0, fltAmbient = 0.3;
+    float fLTDistortion = 0.05, fLTScale = 5.0, fltAmbient = 0.05;
     int iLTPower = 2;
     
     vec4 fLightAttenuation = vec4(1.0,1.0,1.0,1.0); // TODO
-    vec4 fLTThickness = vec4(1.0,0.0,1.0,1.0) - texture(texUnit, outTexCoord);
+    vec4 fLTThickness = vec4(1.0,1.0,1.0,1.0) - texture(texUnit, outTexCoord);
     
     
     // The relation to the light
@@ -73,7 +73,7 @@ void main(void)
     
     
      out_Color = colorOfLight*colorDiffuseAlbedo*fLT;
-     out_Color[3] = 1.0;
+
     // Test av fLT
     // out_Color = fLT;
     
