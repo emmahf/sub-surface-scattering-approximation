@@ -22,60 +22,38 @@ uniform mat4 viewMatrix;
 
 out vec4 out_Color;
 
+float getMagnitude(vec3 v){
+    return sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+}
+
 void main(void)
 {
-    
-    //IN VIEW COORDINATES
-    
-    //DIFFUSE LIGHT
-    // Light source in world coordinates
-    vec3 translight = vec3(lightPosition.x, lightPosition.y, lightPosition.z);
-    translight = mat3(viewMatrix)*lightPosition;
-
-    //Set color of
+    //Model stuff
     vec4 colorOfLight = vec4(0.7,0.9,1.0,1.0);
-    vec3 light = vec3(1.0,0.0,0.0);
-	
-    light = translight;
-    light = normalize(light);
-    float diffuse, specular, shade;
-	
-	// Diffuse
-	diffuse = dot(normalize(out_Normal), light);
-	diffuse = max(0.0, diffuse); // No negative light
-	
-	// Specular
-	vec3 r = reflect(-light, normalize(out_Normal));
-	vec3 v = normalize(-pixPos); // View direction
-	specular = dot(r, v);
-	if (specular > 0.0)
-		specular = 2.0 * pow(specular, 5.0);
-	specular = max(specular, 0.0);
-	shade = 0.7*diffuse + 1.0*specular;
-    
-	vec3 diffuseLight = vec3(diffuse, diffuse, diffuse);
     vec4 colorDiffuseAlbedo = vec4(1.0,0.5,0.7,1.0);
-    
-    out_Color = vec4(diffuseLight, 1.0) * colorDiffuseAlbedo;
-    
 
-    
-    //TRANSLUCENCY
-    light = translight;
+    // Light source in world coordinates --> view coordinates
+    vec3 light = mat3(viewMatrix)*lightPosition;
     
     //point in view coordinates
     vec3 point = pixPos;
     
     //this assumes that both pixPos and Light are given in the same space
     vec3 L = light - point;
-    L = normalize(L);
+
+   float distance = getMagnitude(L);
+   L =  normalize(L);
+   L = L/(distance/7);
+
+
     vec3 Linv = -L;
     vec3 V = vec3(eye);
+    V = normalize(V);
     //vec3 V = camPosition - pixPos;
     vec3 N = out_Normal;
     
     
-    float fLTDistortion = 0.05, fLTScale = 2.0, fltAmbient = 0.3;
+    float fLTDistortion = 0.05, fLTScale = 5.0, fltAmbient = 0.3;
     int iLTPower = 2;
     
     vec4 fLightAttenuation = vec4(1.0,1.0,1.0,1.0); // TODO
@@ -95,7 +73,7 @@ void main(void)
     
     
      out_Color = colorOfLight*colorDiffuseAlbedo*fLT;
-     
+     out_Color[3] = 1.0;
     // Test av fLT
     // out_Color = fLT;
     
