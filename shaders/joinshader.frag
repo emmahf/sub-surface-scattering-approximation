@@ -9,6 +9,7 @@ void main(void)
 {
     vec4 a = texture(texUnit, outTexCoord);
     vec4 b  = texture(texUnit2, outTexCoord);
+  
     out_Color = a + b;
    // out_Color = vec4(1.0,0.0,0.0,1.0);
 }

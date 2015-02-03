@@ -53,7 +53,7 @@ void main(void)
     vec3 N = out_Normal;
     
     
-    float fLTDistortion = 0.05, fLTScale = 5.0, fltAmbient = 0.05;
+    float fLTDistortion = 0.05, fLTScale = 1.0, fltAmbient = 0.02;
     int iLTPower = 2;
     
     vec4 fLightAttenuation = vec4(1.0,1.0,1.0,1.0); // TODO
@@ -62,12 +62,15 @@ void main(void)
     
     // The relation to the light
     //Calculate the vector vLTLight = + vLight + vNormal * fLTDistortion
+    
     vec3 vLTLight = L + N*fLTDistortion;
+
+    fLTThickness = fLTThickness*fLTThickness;
     
     //calc: pow(saturate(dot(vEye, -vLTLight)) , iLTPower) * fltScale
-    float fLTDot = pow(dot(V, -vLTLight) / 5.0, iLTPower) * fLTScale;
+    float fLTDot = pow(dot(V, -vLTLight), iLTPower) * fLTScale;
     
-    
+    //fltThickness /= 2.0;
     //fLT = flightAttenuation * ( fltDot + fltAmbient) * fltThickness
      vec4 fLT = fLightAttenuation * (fLTDot + fltAmbient)* fLTThickness;
     

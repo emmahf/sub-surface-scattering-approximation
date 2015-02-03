@@ -53,7 +53,7 @@ void main(void)
 	vec3 v = normalize(exSurface); // View direction
 	specular = dot(r, v);
 	if (specular > 0.0)
-		specular = pow(specular, 0.5);
+		specular = pow(specular, 1.0);
 	specular = max(specular, 0.0);
 
 	vec3 spec = objectColor * lightColor *specular * 0.1;

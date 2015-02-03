@@ -65,7 +65,7 @@ void zprInit(mat4 *viewMatrix, vec3 cam, vec3 point)
     updateCameraMatrix(NULL);
 
     glutMouseFunc(zprMouse);
-    glutKeyboardFunc(zprKey);
+    //glutKeyboardFunc(zprKey);
     glutMotionFunc(zprMouseFunc);
 }
 
