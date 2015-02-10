@@ -57,11 +57,12 @@ void main(void)
     vec3 N = out_Normal;
     
     
-    float fLTDistortion = 0.05, fLTScale = 2.0, fltAmbient = 0.02;
+    float fLTDistortion = 0.1, fLTScale = 1.5, fltAmbient = 0.01;
     int iLTPower = 2;
     
-    vec4 fLightAttenuation = vec4( vec3(1.0 - distance/10), 1.0); // TODO
+    vec4 fLightAttenuation = vec4( vec3(1.0 - distance/20), 1.0); // TODO
 
+    //fLightAttenuation = vec4(1.0);
     float distanceToLightFromCamera = distance(vec4(0.0), vec4(lightPosition,1.0));
     float distanceToLight = distance(pixPos, lightPosition);
 
@@ -72,7 +73,7 @@ void main(void)
     
     vec3 vLTLight = L + N*fLTDistortion;
 
-    fLTThickness = fLTThickness/3;
+    fLTThickness = fLTThickness*fLTThickness/3;
     
     //calc: pow(saturate(dot(vEye, -vLTLight)) , iLTPower) * fltScale
     float fLTDot = pow(dot(V, -vLTLight), iLTPower) * fLTScale;
@@ -102,7 +103,7 @@ void main(void)
    // out_Color = vec4(1.0,0.0,0.0,1.0);
 
    //fLightAttenuation.w = 1.0;
-   //out_Color = vec4(1.0 - distance/7);
+   //out_Color = fLightAttenuation;
 }
 
 
