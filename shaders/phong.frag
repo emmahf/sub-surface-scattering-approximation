@@ -40,14 +40,14 @@ void main(void)
 	float diffuse, specular, shade;
 
 	//ambient
-	vec3 amb = objectColor*lightColor*0.1;
+	vec3 amb = objectColor*lightColor*0.0;
 
 	// Diffuse
 	diffuse = dot(normalize(exNormal), L);
 	diffuse = max(0.0, diffuse); // No negative light
 	
 
-	vec3 diff = objectColor * lightColor * diffuse*0.8;	   
+	vec3 diff = objectColor * lightColor * diffuse*0.9;	   
 
 	// Specular
 	vec3 r = reflect(normalize(L),normalize(exNormal));
@@ -57,10 +57,10 @@ void main(void)
 		specular = pow(specular, 1.0);
 	specular = max(specular, 0.0);
 
-	vec3 spec = objectColor * lightColor *specular * 0.1;
+	vec3 spec = objectColor * lightColor *specular * 0.05;
 
 
-	outColor = vec4(amb + diff, 1.0);
+	outColor = vec4(amb + diff + spec, 1.0);
 	// vec4 colorDiffuseAlbedo = vec4(1.0,0.8,0.9,1.0);
         
  //    outColor = vec4(diffuseLight, 1.0) * colorDiffuseAlbedo;

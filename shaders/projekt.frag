@@ -17,7 +17,7 @@ in vec3 pixPos;  // Needed for specular reflections
 uniform sampler2D texUnit;
 uniform vec3 camPosition;
 uniform vec3 lightPosition;
-
+uniform vec3 objectDiffuseColor;
 uniform mat4 viewMatrix;
 
 out vec4 out_Color;
@@ -31,6 +31,10 @@ void main(void)
     //Model stuff
     vec4 colorOfLight = vec4(1.0,1.0,1.0,1.0);
     vec4 colorDiffuseAlbedo = vec4(1.0,0.2, 1.0,1.0);
+
+
+    //vec4 colorOfLight = vec4(colorOfLight,1.0);
+    colorDiffuseAlbedo = vec4(objectDiffuseColor,1.0);
 
     // Light source in world coordinates --> view coordinates
     vec3 light = mat3(viewMatrix)*lightPosition;
@@ -53,19 +57,22 @@ void main(void)
     vec3 N = out_Normal;
     
     
-    float fLTDistortion = 0.05, fLTScale = 1.0, fltAmbient = 0.02;
+    float fLTDistortion = 0.05, fLTScale = 2.0, fltAmbient = 0.02;
     int iLTPower = 2;
     
-    vec4 fLightAttenuation = vec4(1.0,1.0,1.0,1.0); // TODO
+    vec4 fLightAttenuation = vec4( vec3(1.0 - distance/10), 1.0); // TODO
+
+    float distanceToLightFromCamera = distance(vec4(0.0), vec4(lightPosition,1.0));
+    float distanceToLight = distance(pixPos, lightPosition);
+
     vec4 fLTThickness = vec4(1.0,1.0,1.0,1.0) - texture(texUnit, outTexCoord);
-    
-    
+   
     // The relation to the light
     //Calculate the vector vLTLight = + vLight + vNormal * fLTDistortion
     
     vec3 vLTLight = L + N*fLTDistortion;
 
-    fLTThickness = fLTThickness*fLTThickness;
+    fLTThickness = fLTThickness/3;
     
     //calc: pow(saturate(dot(vEye, -vLTLight)) , iLTPower) * fltScale
     float fLTDot = pow(dot(V, -vLTLight), iLTPower) * fLTScale;
@@ -93,6 +100,9 @@ void main(void)
     // out_Color = vec4(V, 1.0);
     
    // out_Color = vec4(1.0,0.0,0.0,1.0);
+
+   //fLightAttenuation.w = 1.0;
+   //out_Color = vec4(1.0 - distance/7);
 }
 
 
