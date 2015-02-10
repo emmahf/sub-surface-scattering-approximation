@@ -5,7 +5,6 @@
 	#include <OpenGL/gl3.h>
 	#include "MicroGlut.h"
 	// uses framework Cocoa
-
 #else
 	#ifdef WIN32
 // MS
@@ -41,6 +40,10 @@
 
 #define NUM_LIGHTS 4
 
+#define TEX_UNIT 0
+#define TEX_UNIT1 1
+
+
 void OnTimer(int value);
 
 
@@ -58,8 +61,6 @@ GLfloat squareTexCoord[] = {
 GLuint squareIndices[] = {0, 1, 2, 0, 2, 3};
 
 
-mat4 projectionMatrix,
-        viewMatrix, rotateMatrix, viewMatrixTemp; // viewMatrix controlled by zpr.c
 
 mat4 modelMatrix = {{ 3.0, 0.0, 0.0, 4.3,
                               0.0, 3.0, 0.0, 2.3,
@@ -113,20 +114,38 @@ mat4 lightMatrix = {{ 1.0, 0.0, 0.0,  0.0,
 
 
 //----------------------Globals-------------------------------------------------
-Point3D axis, cam, point, lightPosition, originalLightPosition, lightColor, bunnyColor, sceneColor, cameraDepth;
+Point3D axis, cam, point, lightPosition, originalLightPosition, lightColor, bunnyColor, sceneColor, cameraDepth, axis;
 Model *bunny, *squareModel, *scene, *sphere,
       *bottom, *side1, *side2,
       *statue,
       *box, *box_stretched, *box_bulge, *box_valley;
 
-FBOstruct *fbo_depth, *fbo2, *fbo3, *fbo_cameraDepth, *fbo_lightDepth;
+FBOstruct *fbo_phong, *fbo_sub, *fbo2, *fbo3, *fbo_cameraDepth, *fbo_lightDepth,  *fbo_depth, *fbo_depth2,;
+
+
+  mat4 projectionMatrix,
+      viewMatrix, rotateMatrix, viewMatrixTemp,
+        textureMatrix, lightViewMatrix; // viewMatrix controlled by zpr.c
+
+mat4 sbmat = {{ 0.5, 0.0, 0.0,  0.5,
+                            0.0, 0.5, 0.0, 0.5,
+                            0.0, 0.0, 0.5, 0.5,
+                            0.0, 0.0, 0.0, 1.0}};
+
 GLuint phongshader = 0,
         shader = 0, passShader = 0 , joinshader = 0,
         lightShader = 0,
         cameraDepthShader = 0, lightDepthShader = 0, thickness = 0;
 
+
 GLuint thicknessBunny, thicknessStatue, thicknessBox;
 int count = 0;
+
+GLuint projTexShaderId,projTexShaderId2, plainShaderId;
+GLuint projTexMapUniform;
+
+int isMoving = 1;
+
 double moveX, moveValue;
 unsigned int vsBuffer, vtBuffer; // Attribute buffers for Vs and Vt
 
@@ -144,6 +163,7 @@ void updateScene(){
     statueMatrix = Mult(sceneModelMatrix, statueMatrix);
     boxMatrix = Mult(sceneModelMatrix, boxMatrix);
 }
+
 
 void init(void)
 {
@@ -169,11 +189,21 @@ void init(void)
     lightDepthShader = loadShaders("shaders/lightDepth.vert", "shaders/lightDepth.frag");
     thickness = loadShaders("shaders/thickness.vert", "shaders/thickness.frag");
 
+    //shadow shaders
+
+    projTexShaderId = loadShaders("shaders/depth1V.vert", "shaders/depth1F.frag");
+    projTexShaderId2 = loadShaders("shaders/depth2V.vert", "shaders/depth2F.frag");
+    projTexMapUniform = glGetUniformLocation(projTexShaderId,"textureUnit");
+    plainShaderId = loadShaders("shaders/plain.vert", "shaders/plain.frag");
+
+
     // Init FBOs
-	fbo_depth = initFBO(W, H, 0);
-	fbo2 = initFBO(W, H, 0);
+	fbo_phong = initFBO(W, H, 0);
+	//fbo2 = initFBO(W, H, 0);
+    fbo_depth = initFBO2(W,H, 0, 1);
+    fbo_depth2 = initFBO2(W,H, 0, 1);
 	fbo3 = initFBO(W, H, 0);
-    fbo_cameraDepth = initFBO(W,H,0);
+    fbo_sub = initFBO(W,H,0);
     fbo_lightDepth = initFBO(W,H,0);
 
 
@@ -232,16 +262,18 @@ void OnTimer(int value)
 {
    // sceneModelMatrix = Mult(sceneModelMatrix, T(moveX,0.0,0.0));
    // lightPosition.x += moveX;
-    count++;
+    if(isMoving){
+        count++;
 
-    sphereModelMatrix = Mult(sphereModelMatrix, T(moveX, 0.0, 0.0) );
-    lightMatrix = Mult(lightMatrix, T(moveX,0.0,0.0));
+        sphereModelMatrix = Mult(sphereModelMatrix, T(moveX, 0.0, 0.0) );
+        lightMatrix = Mult(lightMatrix, T(moveX,0.0,0.0));
 
-    if(count % 900 == 0){
-        moveX = -moveX;
-       // printf("lightPosition.x %f \n", lightPosition.x);
+        if(count % 900 == 0){
+            moveX = -moveX;
+           // printf("lightPosition.x %f \n", lightPosition.x);
+        }
+
     }
-
 
     //printf("lightPosition.x %f \n", lightPosition.x);
 
@@ -272,6 +304,91 @@ void drawSingleTranslucentObject(GLuint thicknessTex, Model * model, mat4 m, GLf
     glUniform3f(glGetUniformLocation(shader,"objectDiffuseColor"), r,g,b);
 
     DrawModel(model, shader, "in_Position", "in_Normal", "in_TexCoord");
+
+
+void setTextureMatrix(mat4 currentModelMatrix)
+{
+    mat4 scaleBiasMatrix;
+
+    IdentityMatrix(textureMatrix);
+
+// Scale and bias transform, moving from unit cube [-1,1] to [0,1]
+    scaleBiasMatrix = Mult(T(0.5, 0.5, 0.0), S(0.5, 0.5, 1.0));
+    textureMatrix = Mult(Mult(scaleBiasMatrix, projectionMatrix), Mult(lightViewMatrix,currentModelMatrix));
+
+
+    //  textureMatrix = Mult(Mult(scaleBiasMatrix, projectionMatrix), modelViewMatrix);
+    // Multiply modelview and transformation matrices
+}
+
+void drawObjects(GLuint shaderId){
+
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
+    glUniform3f(glGetUniformLocation(shaderId,"lightPosition"), lightPosition.x, lightPosition.y, lightPosition.z);
+
+    //bunny
+    setTextureMatrix(modelMatrix);
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.9); // Brighter objects
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, modelMatrix.m);
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "textureMatrix"), 1, GL_TRUE, textureMatrix.m);
+    glUniform3f(glGetUniformLocation(shaderId,"objectColor"), bunnyColor.x, bunnyColor.y, bunnyColor.z);
+
+    DrawModel(bunny, shaderId, "in_Position", NULL, NULL);
+
+    //scene
+    setTextureMatrix(bottomModelMatrix);
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    glUniform3f(glGetUniformLocation(shaderId,"objectColor"), sceneColor.x, sceneColor.y, sceneColor.z);
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, bottomModelMatrix.m);
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "textureMatrix"), 1, GL_TRUE, textureMatrix.m);
+    DrawModel(bottom, shaderId, "in_Position", NULL,NULL);
+
+    setTextureMatrix(side1ModelMatrix);
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side1ModelMatrix.m);
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "textureMatrix"), 1, GL_TRUE, textureMatrix.m);
+    DrawModel(side1, shaderId, "in_Position", NULL, NULL);
+
+
+    setTextureMatrix(side2ModelMatrix);
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side2ModelMatrix.m);
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "textureMatrix"), 1, GL_TRUE, textureMatrix.m);
+    DrawModel(side2, shaderId, "in_Position", NULL, NULL);
+
+}
+
+
+void drawObjectsFirstPass(GLuint shaderId){
+
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
+
+    //bunny
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.9); // Brighter objects
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, modelMatrix.m);
+    glUniform3f(glGetUniformLocation(shaderId,"objectColor"), bunnyColor.x, bunnyColor.y, bunnyColor.z);
+
+    DrawModel(bunny, shaderId, "in_Position", NULL, NULL);
+
+    //scene
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    glUniform3f(glGetUniformLocation(shaderId,"objectColor"), sceneColor.x, sceneColor.y, sceneColor.z);
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, bottomModelMatrix.m);
+    DrawModel(bottom, shaderId, "in_Position", NULL,NULL);
+
+    setTextureMatrix(side1ModelMatrix);
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side1ModelMatrix.m);
+    DrawModel(side1, shaderId, "in_Position", NULL, NULL);
+
+
+    setTextureMatrix(side2ModelMatrix);
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side2ModelMatrix.m);
+    DrawModel(side2, shaderId, "in_Position", NULL, NULL);
+
 }
 
 
@@ -279,160 +396,206 @@ void display(void)
 {
 
     //Update matrices and light to scene transformation
+    int backup = 1;
 
     updateScene();
 
     lightPosition = SetVector(sphereModelMatrix.m[3],sphereModelMatrix.m[7],sphereModelMatrix.m[11]);
 
 
-    // //FRONT Z
-    // useFBO(fbo_cameraDepth, 0L, 0L);
-    // glUseProgram(cameraDepthShader);
-    // glClearColor(0.0, 0.0, 0.0, 1.0);
-    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    if(backup == 1){
+        //DRAW  __ALL__ PHONG OBJECTS TO THE SAME FBO (+ Depth test! )
+        useFBO(fbo_phong,0L,0L);
 
-    // //Send info that is the same for all objects (projection, view matrix, light etc)
-    // glUniformMatrix4fv(glGetUniformLocation(cameraDepthShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
-    // glUniformMatrix4fv(glGetUniformLocation(cameraDepthShader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
+        glUseProgram(phongshader);
+        glClearColor(0.2, 0.0, 0.0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        //Send info that is the same for all objects (projection, view matrix, light etc)
+        glUniformMatrix4fv(glGetUniformLocation(phongshader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
 
-    // //Enable depth tests and all that
-    // // Enable Z-buffering
-    // glEnable(GL_DEPTH_TEST);
-    // // Enable backface culling
-    // glEnable(GL_CULL_FACE);
-    // glCullFace(GL_BACK);
-
-    // //bunny
-    // glUniformMatrix4fv(glGetUniformLocation(cameraDepthShader, "modelMatrix"), 1, GL_TRUE, modelMatrix.m);
-    // DrawModel(bunny, cameraDepthShader, "in_Position", NULL, NULL);
+        glUniformMatrix4fv(glGetUniformLocation(phongshader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
+        glUniform3f(glGetUniformLocation(phongshader, "camPosition"),cam.x,cam.y,cam.z);
+        glUniform1i(glGetUniformLocation(phongshader, "texUnit"), 0);
+        glUniform3f(glGetUniformLocation(phongshader,"lightPosition"), lightPosition.x, lightPosition.y, lightPosition.z);
+        glUniform3f(glGetUniformLocation(phongshader,"lightColor"), lightColor.x, lightColor.y, lightColor.z);
 
 
-    // //LIGHT Z
-    // // vec3 camtemp = SetVector(cam.x, cam.y, cam.z);
-    // // cam = SetVector(lightPosition.x, lightPosition.y, lightPosition.z);
-    // // zprInit(&viewMatrix, cam, point);
+        //Enable depth tests and all that
+        // Enable Z-buffering
+        glEnable(GL_DEPTH_TEST);
+        // Enable backface culling
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
 
-    // useFBO(fbo_lightDepth, 0L, 0L);
-    // glUseProgram(lightDepthShader);
-    // glClearColor(0.0, 0.0, 0.0, 1.0);
-    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        drawSinglePhongObject(bunny, modelMatrix, bunnyColor.x,bunnyColor.y, bunnyColor.z);
+        drawSinglePhongObject(statue, statueMatrix, 0.3,0.7,0.4);
+        drawSinglePhongObject(box, boxMatrix, 1.0,0.2,0.5);
+        drawSinglePhongObject(bottom, bottomModelMatrix, sceneColor.x, sceneColor.y, sceneColor.z);
+        drawSinglePhongObject(side1, side1ModelMatrix, sceneColor.x, sceneColor.y, sceneColor.z);
+        drawSinglePhongObject(side2, side2ModelMatrix, sceneColor.x, sceneColor.y, sceneColor.z);
 
-    // //Send info that is the same for all objects (projection, view matrix, light etc)
-    // glUniformMatrix4fv(glGetUniformLocation(lightDepthShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
-    // glUniformMatrix4fv(glGetUniformLocation(lightDepthShader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
-    // glUniform3f(glGetUniformLocation(lightDepthShader,"lightPosition"), lightPosition.x, lightPosition.y, lightPosition.z);
+        //ALL LIGHTSURFACES (SAME FBO as PHONG)
+        glUseProgram(lightShader);
+        glUniformMatrix4fv(glGetUniformLocation(lightShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
+        glUniformMatrix4fv(glGetUniformLocation(lightShader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
 
-    // //Enable depth tests and all that
-    // // Enable Z-buffering
-    // glEnable(GL_DEPTH_TEST);
-    // // Enable backface culling
-    // glEnable(GL_CULL_FACE);
-    // glCullFace(GL_FRONT);
-
-    // //bunny
-    // glUniformMatrix4fv(glGetUniformLocation(lightDepthShader, "modelMatrix"), 1, GL_TRUE, modelMatrix.m);
-    // DrawModel(bunny, lightDepthShader, "in_Position", NULL, NULL);
-
-    // // cam = SetVector(camtemp.x, camtemp.y, camtemp.z);
-    // // zprInit(&viewMatrix, camtemp, point);
-
-    // //THICKNESS SHADER
-    // useFBO(fbo3, fbo_cameraDepth, fbo_lightDepth); //write to fbo3, read from fbo2 and from fbo1
-    // glUseProgram(thickness);
-
-    // glUniform1i(glGetUniformLocation(thickness, "texUnit"), 0);
-    // glUniform1i(glGetUniformLocation(thickness, "texUnit2"), 1);
-
-    // glDisable(GL_CULL_FACE);
-    // glDisable(GL_DEPTH_TEST);
-
-    // DrawModel(squareModel, thickness, "in_Position", NULL, "in_TexCoord");
-
-    //DRAW  __ALL__ PHONG OBJECTS TO THE SAME FBO (+ Depth test! )
-    useFBO(fbo_depth,0L,0L);
-
-    glUseProgram(phongshader);
-    glClearColor(0.2, 0.0, 0.0, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    //Send info that is the same for all objects (projection, view matrix, light etc)
-    glUniformMatrix4fv(glGetUniformLocation(phongshader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
-
-    glUniformMatrix4fv(glGetUniformLocation(phongshader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
-    glUniform3f(glGetUniformLocation(phongshader, "camPosition"),cam.x,cam.y,cam.z);
-    glUniform1i(glGetUniformLocation(phongshader, "texUnit"), 0);
-    glUniform3f(glGetUniformLocation(phongshader,"lightPosition"), lightPosition.x, lightPosition.y, lightPosition.z);
-    glUniform3f(glGetUniformLocation(phongshader,"lightColor"), lightColor.x, lightColor.y, lightColor.z);
+        //sphere
+        glUniformMatrix4fv(glGetUniformLocation(lightShader, "modelMatrix"), 1, GL_TRUE, sphereModelMatrix.m);
+        DrawModel(sphere, lightShader, "in_Position", NULL, NULL);
 
 
-    //Enable depth tests and all that
-    // Enable Z-buffering
-    glEnable(GL_DEPTH_TEST);
-    // Enable backface culling
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+        //DRAW ALL TRANSLUCENT OBJECTS TO ANOTHER FBO
+        useFBO(fbo_sub, 0L, 0L);
+        glClearColor(0.0, 0.0, 0.0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    drawSinglePhongObject(bunny, modelMatrix, bunnyColor.x,bunnyColor.y, bunnyColor.z);
-    drawSinglePhongObject(statue, statueMatrix, 0.3,0.7,0.4);
-    drawSinglePhongObject(box, boxMatrix, 1.0,0.2,0.5);
-    drawSinglePhongObject(bottom, bottomModelMatrix, sceneColor.x, sceneColor.y, sceneColor.z);
-    drawSinglePhongObject(side1, side1ModelMatrix, sceneColor.x, sceneColor.y, sceneColor.z);
-    drawSinglePhongObject(side2, side2ModelMatrix, sceneColor.x, sceneColor.y, sceneColor.z);
+        glUseProgram(shader);
+        glUniformMatrix4fv(glGetUniformLocation(shader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
+        glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
+        glUniform3f(glGetUniformLocation(shader, "camPosition"),cam.x,cam.y,cam.z);
+        glUniform3f(glGetUniformLocation(shader,"lightPosition"), lightPosition.x, lightPosition.y, lightPosition.z);
+        glUniform1i(glGetUniformLocation(shader, "texUnit"), 0);
 
-    //ALL LIGHTSURFACES (SAME FBO as PHONG)
-    glUseProgram(lightShader);
-    glUniformMatrix4fv(glGetUniformLocation(lightShader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
-    glUniformMatrix4fv(glGetUniformLocation(lightShader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
+        // Enable Z-buffering
+        glDisable(GL_CULL_FACE);
 
-    //sphere
-    glUniformMatrix4fv(glGetUniformLocation(lightShader, "modelMatrix"), 1, GL_TRUE, sphereModelMatrix.m);
-    DrawModel(sphere, lightShader, "in_Position", NULL, NULL);
+        //bunny
+        drawSingleTranslucentObject(thicknessBunny , bunny, modelMatrix, bunnyColor.x,bunnyColor.y, bunnyColor.z);
+        drawSingleTranslucentObject(thicknessStatue, statue, statueMatrix, 0.3,0.7,0.4);
+        drawSingleTranslucentObject(thicknessBox, box, boxMatrix, 1.0,0.2,0.5);
 
 
-    //DRAW ALL TRANSLUCENT OBJECTS TO ANOTHER FBO
-    useFBO(fbo2, 0L, 0L);
-    glClearColor(0.0, 0.0, 0.0, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        //JOIN SHADER
+        useFBO(fbo3, fbo_phong, fbo_sub); //write to fbo3, read from fbo2 and from fbo1
+        glUseProgram(joinshader);
 
-    glUseProgram(shader);
-    glUniformMatrix4fv(glGetUniformLocation(shader, "projMatrix"), 1, GL_TRUE, projectionMatrix.m);
-    glUniformMatrix4fv(glGetUniformLocation(shader, "viewMatrix"), 1, GL_TRUE, viewMatrix.m);
-    glUniform3f(glGetUniformLocation(shader, "camPosition"),cam.x,cam.y,cam.z);
-    glUniform3f(glGetUniformLocation(shader,"lightPosition"), lightPosition.x, lightPosition.y, lightPosition.z);
-    glUniform1i(glGetUniformLocation(shader, "texUnit"), 0);
+        glUniform1i(glGetUniformLocation(joinshader, "texUnit"), 0);
+        glUniform1i(glGetUniformLocation(joinshader, "texUnit2"), 1);
 
-    // Enable Z-buffering
-    glDisable(GL_CULL_FACE);
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+        DrawModel(squareModel, joinshader, "in_Position", NULL, "in_TexCoord");
 
-    //bunny
-    drawSingleTranslucentObject(thicknessBunny , bunny, modelMatrix, bunnyColor.x,bunnyColor.y, bunnyColor.z);
-    drawSingleTranslucentObject(thicknessStatue, statue, statueMatrix, 0.3,0.7,0.4);
-    drawSingleTranslucentObject(thicknessBox, box, boxMatrix, 1.0,0.2,0.5);
+        //Pass on Shader
+        useFBO(0L, fbo3, 0L);
+        glClearColor(0.0, 0.0, 0.0, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glUseProgram(passShader);
+        glUniform1i(glGetUniformLocation(passShader, "texUnit"), 0);
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+        DrawModel(squareModel, passShader, "in_Position", NULL, "in_TexCoord");
+    }
+        else{
+            vec3 cameraPosition = cam;
+        // ----- Drawing from point of light
+
+        //save old camera position
+        //vec3 camtemp = SetVector(cam.x, cam.y, cam.z);
+
+        //set camera position to the light position
+        //cam = SetVector(lightPosition.x, lightPosition.y, lightPosition.z);
+
+        //create the new viewmatrix accordingly.
+        //zprInit(&viewMatrix, cam, point);
+
+        // Setup projection matrix
+       // projectionMatrix = perspective(45, W/H, 2, 4000);
+
+        //Create the view matrix from the light
+        lightViewMatrix = lookAt(lightPosition.x, lightPosition.y, lightPosition.z,
+                    point.x, point.y, point.z, 0,1,0);
+
+        // Setup the view from the light source
+        viewMatrix = lightViewMatrix;
+
+        //Setup projection matrix
+
+        // 1. render scene to FBO 1 with Back culling
+        useFBO(fbo_depth, NULL, NULL);
+        glViewport(0,0,W,H);
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE); // Depth only
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        //Using the simple shader
+        glUseProgram(plainShaderId);
+        glUniform1i(plainShaderId,TEX_UNIT);
+        glActiveTexture(GL_TEXTURE0 + TEX_UNIT);
+        glBindTexture(GL_TEXTURE_2D,0);
+
+        glCullFace(GL_BACK);
+
+        printf("%s\n", "mohahahaha");
+        drawObjectsFirstPass(plainShaderId);
 
 
-    //JOIN SHADER
-    useFBO(fbo3, fbo_depth, fbo2); //write to fbo3, read from fbo2 and from fbo1
-    glUseProgram(joinshader);
+        // 1. render scene to FBO 2
+        useFBO(fbo_depth2, NULL, NULL);
+        glViewport(0,0,W,H);
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE); // Depth only
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glUniform1i(glGetUniformLocation(joinshader, "texUnit"), 0);
-    glUniform1i(glGetUniformLocation(joinshader, "texUnit2"), 1);
+        //Using the simple shader with front culling
+        glUseProgram(plainShaderId);
+        glUniform1i(plainShaderId,TEX_UNIT);
+        glActiveTexture(GL_TEXTURE1 + TEX_UNIT);
+        glBindTexture(GL_TEXTURE_2D,1);
 
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_DEPTH_TEST);
-    DrawModel(squareModel, joinshader, "in_Position", NULL, "in_TexCoord");
+        glCullFace(GL_FRONT);
 
-    //Pass on Shader
-    useFBO(0L, fbo3, 0L);
-    glClearColor(0.0, 0.0, 0.0, 0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        printf("%s\n", "mohahahaha");
+        drawObjectsFirstPass(plainShaderId);
 
-    glUseProgram(passShader);
-    glUniform1i(glGetUniformLocation(passShader, "texUnit"), 0);
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_DEPTH_TEST);
-    DrawModel(squareModel, passShader, "in_Position", NULL, "in_TexCoord");
 
+        // Render from Camera
+
+        //Move camera back to original camera position
+        //zprInit(&viewMatrix, camtemp,point);
+        useFBO(NULL, fbo_depth, fbo_depth2);
+        glViewport(0,0,W,H);
+
+        //Enabling color write (previously disabled for light POV z-buffer rendering)
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+        // Clear previous frame values
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        //Using the projTex shader
+        glUseProgram(projTexShaderId2);
+
+        glUniform1i(glGetUniformLocation(projTexShaderId2, "texxxUnit"), 0);
+        glUniform1i(glGetUniformLocation(projTexShaderId2, "texxxUnit2"), 1);
+
+
+        glUniform1i(projTexMapUniform,TEX_UNIT);
+        glActiveTexture(GL_TEXTURE0 + TEX_UNIT);
+        glBindTexture(GL_TEXTURE_2D,fbo_depth->depth);
+
+        glUniform1i(projTexMapUniform,TEX_UNIT);
+        glActiveTexture(GL_TEXTURE1 + TEX_UNIT);
+        glBindTexture(GL_TEXTURE_2D,fbo_depth2->depth);
+
+
+
+        // Setup the modelview from the camera
+       // modelViewMatrix = lookAt(p_camera.x, p_camera.y, p_camera.z,
+        //                l_camera.x, l_camera.y, l_camera.z, 0,1,0);
+
+            // Setup the view from the light source
+       viewMatrix = lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z,
+                   point.x, point.y, point.z, 0,1,0);
+
+
+           printf("%s\n", "yakiyakiyaki");
+        glCullFace(GL_BACK);
+
+        drawObjects(projTexShaderId2);
+
+        glutSwapBuffers();
+
+    }
 
     //Reset scene transformation
     sceneModelMatrix = IdentityMatrix();
@@ -460,16 +623,24 @@ void myKeys(unsigned char key, int x, int y)
    case 'j':
     sceneModelMatrix = Mult(sceneModelMatrix, ArbRotate(axis, 0.3));
     break;
-  case 'k':
+   case 'k':
     sceneModelMatrix = Mult(sceneModelMatrix,ArbRotate(axis, -0.3));
     break;
+   case 'p':
+     if(isMoving == 1){
+        isMoving = 0;
+        printf("%s\n", "ismoving is 0");
+        }
+     else if(isMoving == 0){
+        printf("%s\n", "ismoving is 1");
+        isMoving = 1;
+        }
 
+        break;
    default:
      break;
     }
 }
-
-
 //-----------------------------main-----------------------------------------------
 int main(int argc, char *argv[])
 {
@@ -486,6 +657,8 @@ int main(int argc, char *argv[])
     init();
     zprInit(&viewMatrix, cam, point);
     glutKeyboardFunc(myKeys);
+
+    //glutKeyboardFunc(zprKey);
 
     glutMainLoop();
     exit(0);
