@@ -23,6 +23,7 @@ void main(void)
 {	
 	mat3 test =  mat3(1.0);
     vec3 light = mat3(viewMatrix)*test*lightPosition;
+    //vec3 light = lightPosition;
     //light = lightPosition;
     //light = lightPosition;
     //float norm = Norm(light);
