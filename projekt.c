@@ -120,7 +120,7 @@ Model *bunny, *squareModel, *scene, *sphere,
       *statue,
       *box, *box_stretched, *box_bulge, *box_valley;
 
-FBOstruct *fbo_phong, *fbo_sub, *fbo2, *fbo3, *fbo_cameraDepth, *fbo_lightDepth,  *fbo_depth, *fbo_depth2,;
+FBOstruct *fbo_phong, *fbo_sub, *fbo2, *fbo3, *fbo_cameraDepth, *fbo_lightDepth,  *fbo_depth, *fbo_depth2;
 
 
   mat4 projectionMatrix,
@@ -305,9 +305,9 @@ void drawSingleTranslucentObject(GLuint thicknessTex, Model * model, mat4 m, GLf
 
     DrawModel(model, shader, "in_Position", "in_Normal", "in_TexCoord");
 
+}
 
-void setTextureMatrix(mat4 currentModelMatrix)
-{
+void setTextureMatrix(mat4 currentModelMatrix){
     mat4 scaleBiasMatrix;
 
     IdentityMatrix(textureMatrix);
