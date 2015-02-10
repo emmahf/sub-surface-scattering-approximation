@@ -24,17 +24,17 @@ void main(void)
 {
     outTexCoord = in_TexCoord;
     out_Normal = mat3(viewMatrix) * mat3(modelMatrix) * in_Normal; // Cheated normal matrix, OK with no non-uniform scaling
-    
+
     Ps = normalize( mat3(viewMatrix) * mat3(modelMatrix) * Vs );
     Pt = normalize( mat3(viewMatrix) * mat3(modelMatrix) * Vt );
 
     //vector from point to camera in viewspace
     eye = -viewMatrix * modelMatrix * vec4(in_Position,1.0);
-    
+
     //the point in viewspace
     pixPos = vec3(viewMatrix * modelMatrix * vec4(in_Position, 1.0));
-    
-    
-    
+
+
+
     gl_Position = projMatrix * viewMatrix * modelMatrix * vec4(in_Position, 1.0);
 }
