@@ -13,6 +13,10 @@ uniform float shade;
 uniform sampler2D texxxUnit;
 uniform sampler2D texxxUnit2;
 
+
+uniform vec3 lightPosition;
+in vec4 exitPoint;
+
 void main()
 {	
 	// Perform perspective division to get the actual texture position
@@ -46,28 +50,40 @@ void main()
 	out_Color = vec4(shadow * shade);
 
 
+	vec4 teat = exitPoint;
+	vec4 lp = vec4(lightPosition, 1.0);
+	
+	float exitDistanceFromLight = distance(exitPoint, vec4(lightPosition,1.0));
+	float entryPointDistanceFromLight = distanceFromLight;
 
+	float thickness = exitDistanceFromLight - shadowCoordinateWdivide.z;
+
+	thickness = exitDistanceFromLight - entryPointDistanceFromLight;
 
 // Debugging - other data mapped on scene
 	out_Color =	 vec4(1.0 - pow(distanceFromLight,5));
 	out_Color =	 vec4(1.0 - pow(distanceFromLight2,5));
 
 	out_Color = vec4(1.0 - (distanceFromLight2 - distanceFromLight)*200) ;
-	//out_Color = vec4(1.0,0.0,0.0,1.0);
-//	out_Color =	 vec4(shadowCoordinateWdivide.z); // Bara avstånd
 
+	out_Color = vec4(exitDistanceFromLight/50);
+
+	out_Color = vec4(pow(entryPointDistanceFromLight,5));
+	//out_Color = vec4(1.0,0.0,0.0,1.0);
+	//out_Color =	 vec4(shadowCoordinateWdivide.z / 2); // Bara avstånd
+	//out_Color = vec4(1.0 - pow(thickness/10,5));
 //	out_Color =	 vec4(distanceFromLight - shadowCoordinateWdivide.z);
 //	out_Color =	 vec4((shadowCoordinateWdivide.z - distanceFromLight)*100.0 + 0.5);
 
-/*
-// Debugging - shadow map "raw"
-	// 640x480
-	float s = gl_FragCoord.x / 640.0;
-	s = s * 2.0 - 1.0;
-	float t = gl_FragCoord.y / 480.0;
-	t = t * 2.0 - 1.0;
-	vec2 st = vec2(s, t);
-	float shadowMap = texture(textureUnit, st).x;
-	out_Color =	 vec4(shadowMap);
-*/
+
+// // Debugging - shadow map "raw"
+// 	// 640x480
+// 	float s = gl_FragCoord.x / 640.0;
+// 	s = s * 2.0 - 1.0;
+// 	float t = gl_FragCoord.y / 480.0;
+// 	t = t * 2.0 - 1.0;
+// 	vec2 st = vec2(s, t);
+// 	float shadowMap = texture(textureUnit, st).x;
+// 	out_Color =	 vec4(shadowMap);
+
 }
