@@ -68,6 +68,24 @@ void main(void)
 
     vec4 fLTThickness = vec4(1.0,1.0,1.0,1.0) - texture(texUnit, outTexCoord);
 
+
+    // //Redish
+    // fLTThickness.x += 0.3;
+    // fLTThickness.y -= 0.3;
+    // fLTThickness.z -= 0.3;
+
+
+    // //Bluus
+    // fLTThickness.x -= 0.3;
+    // fLTThickness.y += 0.3;
+    // fLTThickness.z -= 0.3;
+
+
+    // //Greenish
+    // fLTThickness.x -= 0.3;
+    // fLTThickness.y -= 0.3;
+    // fLTThickness.z += 0.7;
+
     // The relation to the light
     //Calculate the vector vLTLight = + vLight + vNormal * fLTDistortion
 
