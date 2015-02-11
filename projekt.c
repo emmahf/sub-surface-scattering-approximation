@@ -115,6 +115,8 @@ mat4 lightMatrix = {{ 1.0, 0.0, 0.0,  0.0,
                             0.0, 0.0, 0.0, 1.0}};
 
 
+mat4 boxLongMatrix;
+
 //----------------------Globals-------------------------------------------------
 Point3D axis, cam, point, lightPosition, originalLightPosition, lightColor, bunnyColor, sceneColor, cameraDepth, axis;
 Model *bunny, *squareModel, *scene, *sphere,
@@ -164,6 +166,7 @@ void updateScene(){
     sphereModelMatrix = Mult(sceneModelMatrix, sphereModelMatrix);
     statueMatrix = Mult(sceneModelMatrix, statueMatrix);
     boxMatrix = Mult(sceneModelMatrix, boxMatrix);
+    boxLongMatrix = Mult(sceneModelMatrix, boxLongMatrix);
 }
 
 
@@ -230,7 +233,9 @@ void init(void)
 
     box_bulge = LoadModelPlus("good_objects/box_bulge.obj");
     box_valley = LoadModelPlus("good_objects/box_valley.obj");
-    box_stretched = LoadModelPlus("good_objects/box_stretched.obj");
+    box_stretched = LoadModelPlus("good_objects/box_stretched_blender.obj");
+
+    boxLongMatrix = Mult(boxMatrix, T(0.0,0.0,2.0));
 
     // load the scenemodels
     bottom = LoadModelPlus("objects/bottom.obj");
@@ -243,7 +248,7 @@ void init(void)
     printf("%d indices\n", sphere->numIndices);
 
     //Light stuff
-    lightPosition = SetVector(-5.0,5.0,-4.0);
+    lightPosition = SetVector(-5.0,0.0,-3.0);
     sphereModelMatrix = Mult(T(lightPosition.x, lightPosition.y, lightPosition.z), sphereModelMatrix);
     lightColor = SetVector(1.0,1.0,1.0);
 
@@ -486,8 +491,7 @@ void display(void)
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
 
-        drawSinglePhongObject(bunny, modelMatrix, bunnyColor.x,bunnyColor.y, bunnyColor.z);
-        drawSinglePhongObject(statue, statueMatrix, 0.3,0.7,0.4);
+        drawSinglePhongObject(box_stretched, boxLongMatrix, 1.0,0.2,0.5);
         drawSinglePhongObject(box, boxMatrix, 1.0,0.2,0.5);
         drawSinglePhongObject(bottom, bottomModelMatrix, sceneColor.x, sceneColor.y, sceneColor.z);
         drawSinglePhongObject(side1, side1ModelMatrix, sceneColor.x, sceneColor.y, sceneColor.z);
@@ -519,8 +523,7 @@ void display(void)
         glDisable(GL_CULL_FACE);
 
         //bunny
-        drawSingleTranslucentObject(thicknessBunny , bunny, modelMatrix, bunnyColor.x,bunnyColor.y, bunnyColor.z);
-        drawSingleTranslucentObject(thicknessStatue, statue, statueMatrix, 0.3,0.7,0.4);
+        drawSingleTranslucentObject(thicknessBox, box_stretched, boxLongMatrix, 1.0,0.2,0.5);
         drawSingleTranslucentObject(thicknessBox, box, boxMatrix, 1.0,0.2,0.5);
 
 
