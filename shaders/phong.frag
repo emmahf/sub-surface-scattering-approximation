@@ -20,7 +20,7 @@ float getMagnitude(vec3 v){
 	return sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
 }
 void main(void)
-{	
+{
 	mat3 test =  mat3(1.0);
     vec3 light = mat3(viewMatrix)*test*lightPosition;
     //vec3 light = lightPosition;
@@ -45,9 +45,9 @@ void main(void)
 	// Diffuse
 	diffuse = dot(normalize(exNormal), L);
 	diffuse = max(0.0, diffuse); // No negative light
-	
 
-	vec3 diff = objectColor * lightColor * diffuse*0.9;	   
+
+	vec3 diff = objectColor * lightColor * diffuse*0.9;
 
 	// Specular
 	vec3 r = reflect(normalize(L),normalize(exNormal));
@@ -61,8 +61,9 @@ void main(void)
 
 
 	outColor = vec4(amb + diff + spec, 1.0);
+	//outColor = vec4(0.0);
 	// vec4 colorDiffuseAlbedo = vec4(1.0,0.8,0.9,1.0);
-        
+
  //    outColor = vec4(diffuseLight, 1.0) * colorDiffuseAlbedo;
  //    outColor[3] = 1.0;
 

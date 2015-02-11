@@ -26,6 +26,8 @@
 #include "GL_utilities.h"
 #include "loadobj.h"
 #include "zpr.h"
+#include <string.h>
+#include <stdio.h>
 
 // initial width and heights
 #define W 680
@@ -212,7 +214,7 @@ void init(void)
             squareIndices, 4, 6);
 
     cam = SetVector(0, 0, 0.01);
-    point = SetVector(0, 0, 10);
+    point = SetVector(0, 0, -10);
     axis = SetVector(0, 1, 0);
 
 
@@ -241,7 +243,7 @@ void init(void)
     printf("%d indices\n", sphere->numIndices);
 
     //Light stuff
-    lightPosition = SetVector(-5.0,2.0,-4.0);
+    lightPosition = SetVector(-5.0,5.0,-4.0);
     sphereModelMatrix = Mult(T(lightPosition.x, lightPosition.y, lightPosition.z), sphereModelMatrix);
     lightColor = SetVector(1.0,1.0,1.0);
 
@@ -251,13 +253,38 @@ void init(void)
 
     glutTimerFunc(5, &OnTimer, 0);
 
-    moveValue = 0.005;
+    moveValue = 0.002;
     moveX = moveValue;
 
 	zprInit(&viewMatrix, cam, point);
 
+
+    //modelMatrix = Mult( T(0.0, -2.4,0.0),modelMatrix);
+
 }
 
+void ShadowScene(){
+   //  modelMatrix = Mult(S(3.0,3.0,3.0), T(0.0,0.0,0.0));
+
+   //  sphereModelMatrix = Mult(S(1.0,1.0,1.0), T(0.0,0.0,0.0));
+
+
+   //  bottomModelMatrix = Mult(S(1.0,1.0,1.0), T(0.0,-1.9,0.0));
+
+   //  side1ModelMatrix = Mult(S(1.0,1.0,1.0), T(-9.0,5.0,0.0));
+
+   //  side2ModelMatrix = Mult(S(1.0,1.0,1.0), T(5.0,0.0,-10.0));
+
+   //  sbmat = Mult(S(0.5,0.5,0.5), T(0.5,0.5,0.5));
+
+   // cam = SetVector(1, 1, 5);
+   // point = SetVector(0, 0, -10);
+
+   // //Light stuff
+   // lightPosition = SetVector(0.0,0.0,-9.0);
+
+
+}
 void OnTimer(int value)
 {
    // sceneModelMatrix = Mult(sceneModelMatrix, T(moveX,0.0,0.0));
@@ -268,7 +295,7 @@ void OnTimer(int value)
         sphereModelMatrix = Mult(sphereModelMatrix, T(moveX, 0.0, 0.0) );
         lightMatrix = Mult(lightMatrix, T(moveX,0.0,0.0));
 
-        if(count % 900 == 0){
+        if(count % 1800 == 0){
             moveX = -moveX;
            // printf("lightPosition.x %f \n", lightPosition.x);
         }
@@ -333,29 +360,45 @@ void drawObjects(GLuint shaderId){
     glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, modelMatrix.m);
     glUniformMatrix4fv(glGetUniformLocation(shaderId, "textureMatrix"), 1, GL_TRUE, textureMatrix.m);
     glUniform3f(glGetUniformLocation(shaderId,"objectColor"), bunnyColor.x, bunnyColor.y, bunnyColor.z);
-
     DrawModel(bunny, shaderId, "in_Position", NULL, NULL);
 
-    //scene
-    setTextureMatrix(bottomModelMatrix);
-    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
-    glUniform3f(glGetUniformLocation(shaderId,"objectColor"), sceneColor.x, sceneColor.y, sceneColor.z);
-    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, bottomModelMatrix.m);
+    //Box
+    setTextureMatrix(boxMatrix);
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.9); // Brighter objects
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, boxMatrix.m);
     glUniformMatrix4fv(glGetUniformLocation(shaderId, "textureMatrix"), 1, GL_TRUE, textureMatrix.m);
-    DrawModel(bottom, shaderId, "in_Position", NULL,NULL);
+    glUniform3f(glGetUniformLocation(shaderId,"objectColor"),1.0,1.0,1.0);
+    DrawModel(box, shaderId, "in_Position", NULL, NULL);
 
-    setTextureMatrix(side1ModelMatrix);
-    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
-    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side1ModelMatrix.m);
+    //Statue
+    setTextureMatrix(statueMatrix);
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.9); // Brighter objects
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, statueMatrix.m);
     glUniformMatrix4fv(glGetUniformLocation(shaderId, "textureMatrix"), 1, GL_TRUE, textureMatrix.m);
-    DrawModel(side1, shaderId, "in_Position", NULL, NULL);
+    glUniform3f(glGetUniformLocation(shaderId,"objectColor"),1.0,1.0,1.0);
+    DrawModel(statue, shaderId, "in_Position", NULL, NULL);
 
 
-    setTextureMatrix(side2ModelMatrix);
-    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
-    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side2ModelMatrix.m);
-    glUniformMatrix4fv(glGetUniformLocation(shaderId, "textureMatrix"), 1, GL_TRUE, textureMatrix.m);
-    DrawModel(side2, shaderId, "in_Position", NULL, NULL);
+    // //scene
+    // setTextureMatrix(bottomModelMatrix);
+    // glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    // glUniform3f(glGetUniformLocation(shaderId,"objectColor"), sceneColor.x, sceneColor.y, sceneColor.z);
+    // glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, bottomModelMatrix.m);
+    // glUniformMatrix4fv(glGetUniformLocation(shaderId, "textureMatrix"), 1, GL_TRUE, textureMatrix.m);
+    // DrawModel(bottom, shaderId, "in_Position", NULL,NULL);
+
+    // setTextureMatrix(side1ModelMatrix);
+    // glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    // glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side1ModelMatrix.m);
+    // glUniformMatrix4fv(glGetUniformLocation(shaderId, "textureMatrix"), 1, GL_TRUE, textureMatrix.m);
+    // DrawModel(side1, shaderId, "in_Position", NULL, NULL);
+
+
+    // setTextureMatrix(side2ModelMatrix);
+    // glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    // glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side2ModelMatrix.m);
+    // glUniformMatrix4fv(glGetUniformLocation(shaderId, "textureMatrix"), 1, GL_TRUE, textureMatrix.m);
+    // DrawModel(side2, shaderId, "in_Position", NULL, NULL);
 
 }
 
@@ -372,22 +415,34 @@ void drawObjectsFirstPass(GLuint shaderId){
 
     DrawModel(bunny, shaderId, "in_Position", NULL, NULL);
 
-    //scene
-    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
-    glUniform3f(glGetUniformLocation(shaderId,"objectColor"), sceneColor.x, sceneColor.y, sceneColor.z);
-    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, bottomModelMatrix.m);
-    DrawModel(bottom, shaderId, "in_Position", NULL,NULL);
+    //Box
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.9); // Brighter objects
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrixMatrix"), 1, GL_TRUE, boxMatrix.m);
+    glUniform3f(glGetUniformLocation(shaderId,"objectColor"),0.4,1.0,0.4);
+    DrawModel(box, shaderId, "in_Position", NULL, NULL);
+    //Statue
 
-    setTextureMatrix(side1ModelMatrix);
-    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
-    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side1ModelMatrix.m);
-    DrawModel(side1, shaderId, "in_Position", NULL, NULL);
+    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.9); // Brighter objects
+    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrixMatrix"), 1, GL_TRUE, statueMatrix.m);
+    glUniform3f(glGetUniformLocation(shaderId,"objectColor"),0.4,0.4,0.4);
+    DrawModel(statue, shaderId, "in_Position", NULL, NULL);
+
+    // //scene
+    // glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    // glUniform3f(glGetUniformLocation(shaderId,"objectColor"), sceneColor.x, sceneColor.y, sceneColor.z);
+    // glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, bottomModelMatrix.m);
+    // DrawModel(bottom, shaderId, "in_Position", NULL,NULL);
+
+    // setTextureMatrix(side1ModelMatrix);
+    // glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    // glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side1ModelMatrix.m);
+    // DrawModel(side1, shaderId, "in_Position", NULL, NULL);
 
 
-    setTextureMatrix(side2ModelMatrix);
-    glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
-    glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side2ModelMatrix.m);
-    DrawModel(side2, shaderId, "in_Position", NULL, NULL);
+    // setTextureMatrix(side2ModelMatrix);
+    // glUniform1f(glGetUniformLocation(shaderId, "shade"), 0.5); // Brighter objects
+    // glUniformMatrix4fv(glGetUniformLocation(shaderId, "modelMatrix"), 1, GL_TRUE, side2ModelMatrix.m);
+    // DrawModel(side2, shaderId, "in_Position", NULL, NULL);
 
 }
 
@@ -401,6 +456,9 @@ void display(void)
     updateScene();
 
     lightPosition = SetVector(sphereModelMatrix.m[3],sphereModelMatrix.m[7],sphereModelMatrix.m[11]);
+
+    //Create DepthMaps
+
 
 
     if(backup == 1){
@@ -488,23 +546,11 @@ void display(void)
         glDisable(GL_DEPTH_TEST);
         DrawModel(squareModel, passShader, "in_Position", NULL, "in_TexCoord");
     }
-        else{
-            vec3 cameraPosition = cam;
-        // ----- Drawing from point of light
 
-        //save old camera position
-        //vec3 camtemp = SetVector(cam.x, cam.y, cam.z);
+    else{
 
-        //set camera position to the light position
-        //cam = SetVector(lightPosition.x, lightPosition.y, lightPosition.z);
 
-        //create the new viewmatrix accordingly.
-        //zprInit(&viewMatrix, cam, point);
-
-        // Setup projection matrix
-       // projectionMatrix = perspective(45, W/H, 2, 4000);
-
-        //Create the view matrix from the light
+        vec3 cameraPosition = cam;
         lightViewMatrix = lookAt(lightPosition.x, lightPosition.y, lightPosition.z,
                     point.x, point.y, point.z, 0,1,0);
 
@@ -584,17 +630,14 @@ void display(void)
         //                l_camera.x, l_camera.y, l_camera.z, 0,1,0);
 
             // Setup the view from the light source
-       viewMatrix = lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z,
-                   point.x, point.y, point.z, 0,1,0);
+      // viewMatrix = lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z,
+      //             point.x, point.y, point.z, 0,1,0);
 
 
            printf("%s\n", "yakiyakiyaki");
         glCullFace(GL_BACK);
 
         drawObjects(projTexShaderId2);
-
-        glutSwapBuffers();
-
     }
 
     //Reset scene transformation
@@ -626,6 +669,20 @@ void myKeys(unsigned char key, int x, int y)
    case 'k':
     sceneModelMatrix = Mult(sceneModelMatrix,ArbRotate(axis, -0.3));
     break;
+   case 't':
+        sphereModelMatrix = Mult(sphereModelMatrix, T(0.0,0.0,-0.2));
+        break;
+   case 'g':
+        sphereModelMatrix = Mult(sphereModelMatrix, T(0.0,0.0,0.2));
+        break;
+
+   case 'f':
+        sphereModelMatrix = Mult(T(0.0,-0.2,0.0), sphereModelMatrix);
+        break;
+   case 'h':
+        sphereModelMatrix = Mult(T(0.0,0.2,0.0), sphereModelMatrix);
+        break;
+
    case 'p':
      if(isMoving == 1){
         isMoving = 0;
@@ -642,8 +699,19 @@ void myKeys(unsigned char key, int x, int y)
     }
 }
 //-----------------------------main-----------------------------------------------
-int main(int argc, char *argv[])
+int main(int argc, char **argv)
 {
+
+    for(int i = 0; i < argc; i++){
+
+        if(strcmp(argv[i], "lightClose") == 0 ){
+            //setLightPosition();
+        }
+        if(strcmp(argv[i], "lightFar") == 0 ){
+          //  setLightPosition();
+        }
+
+    }
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
     glutInitContextVersion(3, 2); // Might not be needed in Linux
@@ -655,7 +723,7 @@ int main(int argc, char *argv[])
     glutReshapeFunc(reshape);
 
     init();
-    zprInit(&viewMatrix, cam, point);
+    //zprInit(&viewMatrix, cam, point);
     glutKeyboardFunc(myKeys);
 
     //glutKeyboardFunc(zprKey);

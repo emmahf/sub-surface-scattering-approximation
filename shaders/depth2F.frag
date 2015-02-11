@@ -18,14 +18,14 @@ uniform vec3 lightPosition;
 in vec4 exitPoint;
 
 void main()
-{	
+{
 	// Perform perspective division to get the actual texture position
 	vec4 shadowCoordinateWdivide = lightSourceCoord / lightSourceCoord.w;
-	
+
 	// Used to lower moire' pattern and self-shadowing
 	// The optimal value here will vary with different GPU's depending on their Z buffer resolution.
 	shadowCoordinateWdivide.z -= 0.002;
-	
+
 	// Look up the depth value
 	float distanceFromLight = texture(textureUnit, shadowCoordinateWdivide.st).x;
 	distanceFromLight = (distanceFromLight-0.5) * 2.0;
@@ -33,14 +33,14 @@ void main()
 
 	float distanceFromLight2 = texture(texxxUnit2, shadowCoordinateWdivide.st).x;
 	distanceFromLight2 = (distanceFromLight2-0.5) * 2.0;
-	
+
 	// NOTE: This distance look-up disturbs me. It is too simple. It should really
 	// use the camera parameters to correctly restore the actual distance.
 	// For the moment I don't have time to fix this. The demo works, but it
 	// may have hit some constants that are correct more by luck than skill.
 	// This is regrettable and I will correct this when I have time. In the meantime
 	// I do not want to withhold the demo. /Ingemar
-	
+
 	// Compare
 	float shadow = 1.0; // 1.0 = no shadow
 
@@ -52,7 +52,7 @@ void main()
 
 	vec4 teat = exitPoint;
 	vec4 lp = vec4(lightPosition, 1.0);
-	
+
 	float exitDistanceFromLight = distance(exitPoint, vec4(lightPosition,1.0));
 	float entryPointDistanceFromLight = distanceFromLight;
 
@@ -61,14 +61,15 @@ void main()
 	thickness = exitDistanceFromLight - entryPointDistanceFromLight;
 
 // Debugging - other data mapped on scene
-	out_Color =	 vec4(1.0 - pow(distanceFromLight,5));
-	out_Color =	 vec4(1.0 - pow(distanceFromLight2,5));
+	out_Color = vec4(distanceFromLight);
+	//out_Color =	 vec4(1.0 - pow(distanceFromLight2,5));
+	// out_Color =	 vec4(1.0 - pow(distanceFromLight2,5));
 
-	out_Color = vec4(1.0 - (distanceFromLight2 - distanceFromLight)*200) ;
+    out_Color = vec4(1.0 - (distanceFromLight2 - distanceFromLight)*200) ;
 
-	out_Color = vec4(exitDistanceFromLight/50);
+//	out_Color = vec4(exitDistanceFromLight/50);
 
-	out_Color = vec4(pow(entryPointDistanceFromLight,5));
+//	out_Color = vec4(pow(entryPointDistanceFromLight,5));
 	//out_Color = vec4(1.0,0.0,0.0,1.0);
 	//out_Color =	 vec4(shadowCoordinateWdivide.z / 2); // Bara avstånd
 	//out_Color = vec4(1.0 - pow(thickness/10,5));

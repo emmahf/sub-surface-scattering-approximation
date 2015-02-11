@@ -62,7 +62,7 @@ void main(void)
 
     vec4 fLightAttenuation = vec4( vec3(1.0 - distance/20), 1.0); // TODO
 
-    //fLightAttenuation = vec4(1.0);
+    fLightAttenuation = vec4(1.0);
     float distanceToLightFromCamera = distance(vec4(0.0), vec4(lightPosition,1.0));
     float distanceToLight = distance(pixPos, lightPosition);
 
@@ -103,5 +103,15 @@ void main(void)
    // out_Color = vec4(1.0,0.0,0.0,1.0);
 
    //fLightAttenuation.w = 1.0;
-   //out_Color = fLightAttenuation;
+
+   //Original textur
+   //out_Color = texture(texUnit, outTexCoord);
+
+
+   //Thickness
+   //out_Color = fLTThickness;
+
+   //No SSS
+   //out_Color = vec4(0.0);
+
 }
